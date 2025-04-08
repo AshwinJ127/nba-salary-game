@@ -1,5 +1,5 @@
 # NBA Salary Game - Requirements
-flask==2.0.1
+flask==2.2.2
 Flask-SQLAlchemy==3.0.3
 pandas==1.5.3
 numpy>=1.24.3
