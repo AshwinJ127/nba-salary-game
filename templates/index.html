@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NBA Salary Game</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Poppins:wght@400;500;600;700&family=Teko:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>NBA Salary Game</h1>
+      
+      <div class="streaks-container">
+        <div class="streak-box">
+          <div class="streak-title">Current</div>
+          <div class="streak-value" id="streak-value">0</div>
+        </div>
+        <div class="streak-box">
+          <div class="streak-title">Highest</div>
+          <div class="streak-value" id="highest-streak-value">0</div>
+        </div>
+      </div>
+    </header>
+    
+    <!-- Main game container -->
+    <div id="game-content">
+      <!-- A loading spinner will be rendered until data is fetched -->
+      <div class="loading">
+        <div class="loading-spinner"></div>
+      </div>
+    </div>
+    
+    <footer class="footer">
+      <p>Data includes NBA player salaries across multiple seasons</p>
+    </footer>
+  </div>
+  
+  <!-- Reference script.js from the static folder -->
+  <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
+</body>
+</html>
