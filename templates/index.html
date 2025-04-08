@@ -1,45 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2299267231796495"
-    crossorigin="anonymous"></script>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NBA Salary Game</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Poppins:wght@400;500;600;700&family=Teko:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBA Games</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Poppins:wght@400;500;600;700&family=Teko:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-  <div class="container">
-    <header class="header">
-      <h1>NBA Salary Game</h1>
-      
-      <div class="streaks-container">
-        <div class="streak-box">
-          <div class="streak-title">Current</div>
-          <div class="streak-value" id="streak-value">0</div>
-        </div>
-        <div class="streak-box">
-          <div class="streak-title">Highest</div>
-          <div class="streak-value" id="highest-streak-value">0</div>
-        </div>
-      </div>
-    </header>
-    
-    <!-- Main game container -->
-    <div id="game-content">
-      <!-- A loading spinner will be rendered until data is fetched -->
-      <div class="loading">
-        <div class="loading-spinner"></div>
-      </div>
+    <div class="container">
+        <header class="header">
+            <h1>NBA Games</h1>
+        </header>
+        <main class="portal-main">
+            <div class="game-container portal-container">
+                <h2 class="game-selection-title">Select a Game</h2>
+                <div class="portal-content">
+                    <ul class="game-list">
+                        <li><a href="{{ url_for('nba_salary_game') }}" class="button">NBA Salary Game</a></li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+        <footer class="footer">
+            <p>Choose from our collection of interactive NBA games</p>
+        </footer>
     </div>
-    
-    <footer class="footer">
-      <p>Data includes NBA player salaries across multiple seasons</p>
-    </footer>
-  </div>
-  
-  <!-- Reference script.js from the static folder -->
-  <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
 </body>
 </html>

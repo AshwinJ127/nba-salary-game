@@ -203,10 +203,15 @@ def get_data():
     
     return jsonify(data)
 
-# Route to serve the main game page
+# Route to serve the main portal page
 @app.route('/')
 def index():
     return render_template('index.html')
+
+# Route to serve the NBA salary game page
+@app.route('/nba-salary-game')
+def nba_salary_game():
+    return render_template('nba-salary-game.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
