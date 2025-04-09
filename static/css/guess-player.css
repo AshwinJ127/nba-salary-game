@@ -271,6 +271,13 @@
     float: right;
 }
 
+.search-result-unavailable {
+    color: var(--nba-red);
+    font-weight: bold;
+    margin-left: 5px;
+    font-size: 1.2rem;
+}
+
 /* Guess form */
 .guess-form {
     display: flex;
