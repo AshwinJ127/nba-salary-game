@@ -274,41 +274,25 @@ def create_sample_player_stats():
         # Add more players with different seasons
         more_players = []
         for player in players[:15]:  # Use first 15 players
-            # 2022 season
-            more_players.append({
-                "Unique_ID": player["Unique_ID"] + 100,
-                "Rk": player["Rk"],
-                "Player": player["Player"],
-                "Team": player["Team"],
-                "Pos": player["Pos"],
-                "Age": player["Age"] - 1,
-                "G": max(41, player["G"] - 5),
-                "MP": round(player["MP"] * 0.98, 1),
-                "PTS": round(player["PTS"] * 0.95, 1),
-                "TRB": round(player["TRB"] * 0.97, 1),
-                "AST": round(player["AST"] * 0.96, 1),
-                "STL": round(player["STL"] * 0.98, 1),
-                "BLK": round(player["BLK"] * 0.99, 1),
-                "Year": 2022
-            })
-            
-            # 2021 season
-            more_players.append({
-                "Unique_ID": player["Unique_ID"] + 200,
-                "Rk": player["Rk"],
-                "Player": player["Player"],
-                "Team": player["Team"],
-                "Pos": player["Pos"],
-                "Age": player["Age"] - 2,
-                "G": max(41, player["G"] - 10),
-                "MP": round(player["MP"] * 0.95, 1),
-                "PTS": round(player["PTS"] * 0.9, 1),
-                "TRB": round(player["TRB"] * 0.93, 1),
-                "AST": round(player["AST"] * 0.92, 1),
-                "STL": round(player["STL"] * 0.95, 1),
-                "BLK": round(player["BLK"] * 0.97, 1),
-                "Year": 2021
-            })
+            # Add seasons from 2014 to 2022
+            for year_offset in range(1, 10):  # 1 to 9 years back
+                year = 2023 - year_offset
+                more_players.append({
+                    "Unique_ID": player["Unique_ID"] + (year_offset * 100),
+                    "Rk": player["Rk"],
+                    "Player": player["Player"],
+                    "Team": player["Team"],
+                    "Pos": player["Pos"],
+                    "Age": max(19, player["Age"] - year_offset),
+                    "G": max(41, player["G"] - (year_offset * 2)),
+                    "MP": round(player["MP"] * (1 - 0.02 * year_offset), 1),
+                    "PTS": round(player["PTS"] * (1 - 0.03 * year_offset), 1),
+                    "TRB": round(player["TRB"] * (1 - 0.02 * year_offset), 1),
+                    "AST": round(player["AST"] * (1 - 0.02 * year_offset), 1),
+                    "STL": round(player["STL"] * (1 - 0.01 * year_offset), 1),
+                    "BLK": round(player["BLK"] * (1 - 0.01 * year_offset), 1),
+                    "Year": year
+                })
         
         players.extend(more_players)
         
@@ -328,9 +312,32 @@ def create_sample_player_stats():
 def import_player_stats_to_db():
     import csv
     import os
+    import subprocess
     
-    # Create sample data if it doesn't exist
-    create_sample_player_stats()
+    # Check if CSV file exists
+    csv_path = os.path.join(os.path.dirname(__file__), 'nba_per_game_stats.csv')
+    if not os.path.exists(csv_path):
+        # Only create sample data if the CSV doesn't exist
+        print(f"CSV file not found, creating sample data")
+        create_sample_player_stats()
+    else:
+        print(f"Using existing CSV file: {csv_path}")
+        
+        # Check for years in the CSV file
+        try:
+            # Use grep to find unique years in the CSV
+            result = subprocess.run(['grep', '-o', '"Year":[0-9]\+', csv_path], 
+                                   capture_output=True, text=True, check=False)
+            years = set()
+            for line in result.stdout.splitlines():
+                try:
+                    year = int(line.split(':')[1])
+                    years.add(year)
+                except (ValueError, IndexError):
+                    pass
+            print(f"Years found in CSV via grep: {sorted(list(years))}")
+        except Exception as e:
+            print(f"Error checking years in CSV: {e}")
     
     # Load the CSV file
     csv_path = os.path.join(os.path.dirname(__file__), 'nba_per_game_stats.csv')
@@ -353,6 +360,16 @@ def import_player_stats_to_db():
                     player_stats.append(row)
             except (ValueError, TypeError):
                 continue
+        
+        # Collect all years for debugging
+        years = set()
+        for stat in player_stats:
+            try:
+                year = int(stat.get('Year', 0))
+                years.add(year)
+            except (ValueError, TypeError):
+                pass
+        print(f"Years found in CSV: {sorted(list(years))}")
         
         # Add all players to the database
         for stat in player_stats:
@@ -392,7 +409,7 @@ def import_player_stats_to_db():
 def get_player_stats():
     # Ensure data is in the database if accessing this endpoint directly
     with app.app_context():
-        if NBAPlayerStats.query.count() == 0:
+        if NBAPlayerStats.query.count() != 0:
             print("Loading player stats data for API request...")
             import_player_stats_to_db()
     
@@ -416,7 +433,8 @@ def get_player_stats():
             "apg": record.assists,
             "spg": record.steals,
             "bpg": record.blocks,
-            "season": record.season
+            "season": record.season,
+            "year": record.year
         }
         formatted_stats.append(formatted_stat)
     
@@ -437,15 +455,21 @@ def nba_salary_game():
             import_csv_to_db()
     return render_template('nba-salary-game.html')
 
+# Function to ensure all years are available in the database
+
 # Route to serve the NBA guess player game page
 @app.route('/nba-guess-player')
 def nba_guess_player():
-    # Ensure player stats data is loaded only when accessing this game
+    # Ensure player stats data is loaded and all years are available
     with app.app_context():
-        if NBAPlayerStats.query.count() == 0:
+        if NBAPlayerStats.query.count() != 0:
             print("Loading guess player game data...")
             import_player_stats_to_db()
+    
+        
     return render_template('nba-guess-player.html')
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)

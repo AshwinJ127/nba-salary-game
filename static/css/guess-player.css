@@ -1,5 +1,79 @@
 /* NBA Guess the Player - Additional Styles */
 
+/* Header layout */
+.header-top {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative; /* For absolute positioning of filter */
+    margin-bottom: 15px;
+}
+
+.centered-title {
+    text-align: center;
+    margin: 0;
+    flex-grow: 1; /* Take up available space */
+}
+
+/* Filter container styling */
+.filter-container {
+    position: absolute;
+    left: 15px; /* Small indent */
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 1; /* Ensure it's above other elements */
+}
+
+.filter-container label {
+    font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.9rem;
+    color: #FFCD00; /* Yellow color from var(--nba-gold) */
+    font-weight: 600;
+}
+
+.year-filter {
+    padding: 5px 10px;
+    border: 2px solid var(--nba-blue);
+    border-radius: 4px;
+    background-color: white;
+    color: var(--nba-blue);
+    font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+}
+
+.year-filter:hover {
+    border-color: var(--nba-red);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .header-top {
+        margin-bottom: 40px; /* Add space for the filter below */
+        padding-top: 30px; /* Add space for the filter above */
+    }
+    
+    .filter-container {
+        top: -25px; /* Position above the title */
+        left: 50%;
+        transform: translateX(-50%); /* Center horizontally */
+    }
+}
+
+@media (max-width: 480px) {
+    .header-top {
+        margin-bottom: 30px;
+    }
+    
+    .centered-title {
+        font-size: 1.8rem; /* Smaller title on very small screens */
+    }
+}
+
 /* Player info section */
 .player-info-section {
     margin: 10px 0;

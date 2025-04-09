@@ -2,18 +2,22 @@
 
 // Game state
 let gameState = {
-    players: [],           // All players from the API
+    allPlayers: [],        // All players from the API
+    players: [],           // Filtered players based on year
     currentPlayer: null,   // The current player to guess
     streak: 0,             // Current streak
     highestStreak: 0,      // Highest streak achieved
     guessed: false,        // Whether the current player has been guessed
-    searchResults: []      // Search results
+    searchResults: [],     // Search results
+    yearFilter: 0,         // Year filter (0 means all years)
+    availableYears: []     // Available years in the dataset
 };
 
 // DOM elements
 const gameContent = document.getElementById('game-content');
 const streakValue = document.getElementById('streak-value');
 const highestStreakValue = document.getElementById('highest-streak-value');
+const yearFilter = document.getElementById('year-filter');
 
 // Initialize the game
 async function initGame() {
@@ -24,14 +28,31 @@ async function initGame() {
             throw new Error('Failed to fetch player data');
         }
         
-        gameState.players = await response.json();
+        // Store all players and set initial filtered players
+        gameState.allPlayers = await response.json();
+        gameState.players = [...gameState.allPlayers];
+        
+        // Extract available years from the data
+        extractAvailableYears();
+        
+        // Populate the year filter dropdown
+        populateYearFilter();
+        
+        // Add event listener for year filter changes
+        yearFilter.addEventListener('change', handleYearFilterChange);
         
         // Load saved streak from localStorage
         const savedStreak = localStorage.getItem('guessPlayerStreak');
         const savedHighestStreak = localStorage.getItem('guessPlayerHighestStreak');
+        const savedYearFilter = localStorage.getItem('guessPlayerYearFilter');
         
         if (savedStreak) gameState.streak = parseInt(savedStreak);
         if (savedHighestStreak) gameState.highestStreak = parseInt(savedHighestStreak);
+        if (savedYearFilter) {
+            gameState.yearFilter = parseInt(savedYearFilter);
+            yearFilter.value = savedYearFilter;
+            filterPlayersByYear();
+        }
         
         // Update streak display
         updateStreakDisplay();
@@ -47,6 +68,73 @@ async function initGame() {
             </div>
         `;
     }
+}
+
+// Extract available years from the player data
+function extractAvailableYears() {
+    // Get all unique years from the data
+    const years = new Set();
+    
+    gameState.allPlayers.forEach(player => {
+        // Use the year field directly from the data
+        if (player.year) {
+            years.add(player.year);
+            console.log(`Player ${player.player} has year ${player.year}`);
+        } else {
+            console.log(`Player ${player.player} has NO year data`);
+        }
+    });
+    
+    // Convert to array and sort
+    gameState.availableYears = Array.from(years).sort();
+    console.log('Available years:', gameState.availableYears);
+}
+
+// Populate the year filter dropdown
+function populateYearFilter() {
+    // Add "All Years" option
+    const allYearsOption = document.createElement('option');
+    allYearsOption.value = 0;
+    allYearsOption.textContent = 'All Years';
+    yearFilter.appendChild(allYearsOption);
+    
+    // Add options for each available year
+    gameState.availableYears.forEach(year => {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        yearFilter.appendChild(option);
+    });
+}
+
+// Handle year filter changes
+function handleYearFilterChange() {
+    const selectedYear = parseInt(yearFilter.value);
+    gameState.yearFilter = selectedYear;
+    
+    // Save to localStorage
+    localStorage.setItem('guessPlayerYearFilter', selectedYear);
+    
+    // Filter players based on the selected year
+    filterPlayersByYear();
+    
+    // Start a new round with the filtered players
+    startNewRound();
+}
+
+// Filter players based on the selected year
+function filterPlayersByYear() {
+    if (gameState.yearFilter === 0) {
+        // If "All Years" is selected, use all players
+        gameState.players = [...gameState.allPlayers];
+    } else {
+        // Filter players with years greater than or equal to the selected year
+        gameState.players = gameState.allPlayers.filter(player => {
+            return player.year && player.year >= gameState.yearFilter;
+        });
+    }
+    
+    console.log(`Filtered to ${gameState.players.length} players from ${gameState.yearFilter || 'all years'}`);
 }
 
 // Start a new round
