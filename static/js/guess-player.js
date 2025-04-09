@@ -419,19 +419,10 @@ function handleSearch(event) {
             const resultItem = document.createElement('div');
             resultItem.className = 'search-result-item';
             
-            // Check if player is in the filtered list for the current year
-            const playerInFilteredList = gameState.players.some(p => p.player === player.player);
-            
-            // Add a visual indicator for players not in the current time period
+            // No visual indicator for players outside the time period
             resultItem.innerHTML = `
                 <span class="search-result-name">${player.player}</span>
-                ${!playerInFilteredList ? '<span class="search-result-unavailable">*</span>' : ''}
             `;
-            
-            // Add a tooltip to explain the asterisk
-            if (!playerInFilteredList) {
-                resultItem.title = 'Player not available in the selected time period';
-            }
             
             resultItem.addEventListener('click', () => handleGuess(player.player));
             
@@ -471,23 +462,7 @@ function handleGuess(guessedPlayerName) {
     // Hide search results
     searchResults.style.display = 'none';
     
-    // Check if the guessed player is in the filtered list for the current year
-    const playerInFilteredList = gameState.players.some(player => player.player === guessedPlayerName);
-    
-    if (!playerInFilteredList) {
-        // Player not in the filtered list for the current year
-        resultContainer.textContent = `${guessedPlayerName} is not available in the selected time period. Try another player.`;
-        resultContainer.className = 'result incorrect';
-        resultContainer.style.display = 'block';
-        
-        // Don't count this as a guess, just show the message
-        setTimeout(() => {
-            resultContainer.style.display = 'none';
-            searchInput.focus();
-        }, 3000); // Hide the message after 3 seconds
-        
-        return;
-    }
+    // We'll allow guesses for players outside the time range and count them as wrong
     
     // Check if the guess is correct (compare player names)
     const isCorrect = guessedPlayerName === gameState.currentPlayer.player;
