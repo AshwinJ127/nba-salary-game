@@ -326,7 +326,7 @@ def create_sample_player_stats():
 
 # Function to import player stats from CSV to database
 def import_player_stats_to_db():
-    import pandas as pd
+    import csv
     import os
     
     # Create sample data if it doesn't exist
@@ -335,43 +335,54 @@ def import_player_stats_to_db():
     # Load the CSV file
     csv_path = os.path.join(os.path.dirname(__file__), 'nba_per_game_stats.csv')
     
-    # Read the CSV file
-    df = pd.read_csv(csv_path)
-    
-    # Filter players with G >= 41 and Rk <= 100
-    filtered_df = df[(df['G'] >= 41) & (df['Rk'] <= 100)]
-    
-    # Convert to list of dictionaries
-    player_stats = filtered_df.to_dict('records')
-    
     # Clear existing data
     NBAPlayerStats.query.delete()
     
-    # Add all players to the database
-    for stat in player_stats:
-        # Convert Year to season format (e.g., 2014 -> 2013-14)
-        year = int(stat.get('Year', 0))
-        season = f"{year-1}-{str(year)[-2:]}" if year > 0 else ""
+    # Read the CSV file using standard library
+    with open(csv_path, 'r', newline='', encoding='utf-8') as csvfile:
+        reader = csv.DictReader(csvfile)
         
-        # Create new record
-        record = NBAPlayerStats(
-            unique_id=stat.get('Unique_ID', 0),
-            player=stat.get('Player', ''),
-            team=stat.get('Team', ''),
-            position=stat.get('Pos', ''),
-            age=stat.get('Age', 0),
-            games=stat.get('G', 0),
-            minutes=stat.get('MP', 0.0),
-            points=stat.get('PTS', 0.0),
-            rebounds=stat.get('TRB', 0.0),
-            assists=stat.get('AST', 0.0),
-            steals=stat.get('STL', 0.0),
-            blocks=stat.get('BLK', 0.0),
-            season=season,
-            year=year,
-            rank=stat.get('Rk', 0)
-        )
-        db.session.add(record)
+        # Process each row
+        player_stats = []
+        for row in reader:
+            # Filter players with G >= 41 and Rk <= 100
+            try:
+                games = int(row.get('G', 0))
+                rank = int(row.get('Rk', 0))
+                if games >= 41 and rank <= 100:
+                    player_stats.append(row)
+            except (ValueError, TypeError):
+                continue
+        
+        # Add all players to the database
+        for stat in player_stats:
+            try:
+                # Convert Year to season format (e.g., 2014 -> 2013-14)
+                year = int(stat.get('Year', 0))
+                season = f"{year-1}-{str(year)[-2:]}" if year > 0 else ""
+                
+                # Create new record with proper type conversion
+                record = NBAPlayerStats(
+                    unique_id=int(stat.get('Unique_ID', 0)),
+                    player=stat.get('Player', ''),
+                    team=stat.get('Team', ''),
+                    position=stat.get('Pos', ''),
+                    age=int(stat.get('Age', 0)),
+                    games=int(stat.get('G', 0)),
+                    minutes=float(stat.get('MP', 0.0)),
+                    points=float(stat.get('PTS', 0.0)),
+                    rebounds=float(stat.get('TRB', 0.0)),
+                    assists=float(stat.get('AST', 0.0)),
+                    steals=float(stat.get('STL', 0.0)),
+                    blocks=float(stat.get('BLK', 0.0)),
+                    season=season,
+                    year=year,
+                    rank=rank
+                )
+                db.session.add(record)
+            except (ValueError, TypeError) as e:
+                print(f"Error processing player {stat.get('Player', 'unknown')}: {e}")
+                continue
     
     db.session.commit()
     print(f"Imported {len(player_stats)} player stats records to database")
