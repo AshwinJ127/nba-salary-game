@@ -24,13 +24,13 @@ class NBAPlayerSalary(db.Model):
 with app.app_context():
     db.create_all()
 
-def create_sample_player_data():
-    """Create a sample CSV file with player data if it doesn't exist"""
+def create_sample_salary_data():
+    """Create a sample CSV file with player salary data if it doesn't exist"""
     csv_path = os.path.join(os.path.dirname(__file__), 'nba_player_salaries.csv')
     
     # Only create the file if it doesn't exist
     if not os.path.exists(csv_path):
-        print("Creating sample player data CSV file...")
+        print("Creating sample player salary data CSV file...")
         
         # Sample player data
         players = [
@@ -115,12 +115,11 @@ def create_sample_player_data():
         print(f"Using existing player data file: {csv_path}")
 
 def import_csv_to_db():
+    # Create sample data if it doesn't exist
+    create_sample_salary_data()
+    
     # Use the CSV file in the current directory
     csv_path = os.path.join(os.path.dirname(__file__), 'nba_player_salaries.csv')
-    
-    if not os.path.exists(csv_path):
-        print(f"ERROR: CSV file not found at {csv_path}")
-        return
     
     with open(csv_path, newline='', encoding='utf-8') as csvfile:
         reader = csv.DictReader(csvfile)
@@ -203,16 +202,116 @@ def get_data():
     
     return jsonify(data)
 
+# Function to create sample player stats data
+def create_sample_player_stats():
+    """Create a sample CSV file with player stats data if it doesn't exist"""
+    import csv
+    import os
+    
+    csv_path = os.path.join(os.path.dirname(__file__), 'nba_per_game_stats.csv')
+    
+    # Only create the file if it doesn't exist
+    if not os.path.exists(csv_path):
+        print("Creating sample player stats CSV file...")
+        
+        # Sample player stats data
+        players = [
+            {"Unique_ID": 1, "Rk": 1, "Player": "LeBron James", "Team": "LAL", "Pos": "SF", "Age": 38, "G": 55, "MP": 35.5, "PTS": 28.9, "TRB": 8.3, "AST": 6.8, "STL": 0.9, "BLK": 0.6, "Year": 2023},
+            {"Unique_ID": 2, "Rk": 2, "Player": "Stephen Curry", "Team": "GSW", "Pos": "PG", "Age": 34, "G": 56, "MP": 34.7, "PTS": 29.4, "TRB": 6.1, "AST": 6.3, "STL": 0.9, "BLK": 0.4, "Year": 2023},
+            {"Unique_ID": 3, "Rk": 3, "Player": "Kevin Durant", "Team": "PHX", "Pos": "PF", "Age": 34, "G": 47, "MP": 36.0, "PTS": 29.1, "TRB": 6.7, "AST": 5.0, "STL": 0.8, "BLK": 1.4, "Year": 2023},
+            {"Unique_ID": 4, "Rk": 4, "Player": "Giannis Antetokounmpo", "Team": "MIL", "Pos": "PF", "Age": 28, "G": 63, "MP": 32.1, "PTS": 31.1, "TRB": 11.8, "AST": 5.7, "STL": 0.8, "BLK": 0.8, "Year": 2023},
+            {"Unique_ID": 5, "Rk": 5, "Player": "Damian Lillard", "Team": "POR", "Pos": "PG", "Age": 32, "G": 58, "MP": 36.3, "PTS": 32.2, "TRB": 4.8, "AST": 7.3, "STL": 0.9, "BLK": 0.3, "Year": 2023},
+            {"Unique_ID": 6, "Rk": 6, "Player": "Kawhi Leonard", "Team": "LAC", "Pos": "SF", "Age": 31, "G": 52, "MP": 33.6, "PTS": 23.8, "TRB": 6.5, "AST": 3.9, "STL": 1.4, "BLK": 0.5, "Year": 2023},
+            {"Unique_ID": 7, "Rk": 7, "Player": "Paul George", "Team": "LAC", "Pos": "SF", "Age": 32, "G": 56, "MP": 34.6, "PTS": 23.8, "TRB": 6.1, "AST": 5.1, "STL": 1.5, "BLK": 0.4, "Year": 2023},
+            {"Unique_ID": 8, "Rk": 8, "Player": "Klay Thompson", "Team": "GSW", "Pos": "SG", "Age": 33, "G": 69, "MP": 30.0, "PTS": 21.9, "TRB": 4.1, "AST": 2.4, "STL": 0.7, "BLK": 0.4, "Year": 2023},
+            {"Unique_ID": 9, "Rk": 9, "Player": "Jimmy Butler", "Team": "MIA", "Pos": "SF", "Age": 33, "G": 64, "MP": 33.3, "PTS": 22.9, "TRB": 5.9, "AST": 5.3, "STL": 1.8, "BLK": 0.3, "Year": 2023},
+            {"Unique_ID": 10, "Rk": 10, "Player": "Kyrie Irving", "Team": "DAL", "Pos": "PG", "Age": 30, "G": 60, "MP": 37.4, "PTS": 27.1, "TRB": 5.1, "AST": 5.5, "STL": 1.1, "BLK": 0.8, "Year": 2023},
+            {"Unique_ID": 11, "Rk": 11, "Player": "Trae Young", "Team": "ATL", "Pos": "PG", "Age": 24, "G": 73, "MP": 34.8, "PTS": 26.2, "TRB": 3.0, "AST": 10.2, "STL": 1.1, "BLK": 0.1, "Year": 2023},
+            {"Unique_ID": 12, "Rk": 12, "Player": "Devin Booker", "Team": "PHX", "Pos": "SG", "Age": 26, "G": 53, "MP": 34.6, "PTS": 27.8, "TRB": 4.5, "AST": 5.5, "STL": 1.0, "BLK": 0.3, "Year": 2023},
+            {"Unique_ID": 13, "Rk": 13, "Player": "Joel Embiid", "Team": "PHI", "Pos": "C", "Age": 29, "G": 66, "MP": 34.6, "PTS": 33.1, "TRB": 10.2, "AST": 4.2, "STL": 1.0, "BLK": 1.7, "Year": 2023},
+            {"Unique_ID": 14, "Rk": 14, "Player": "Anthony Davis", "Team": "LAL", "Pos": "C", "Age": 30, "G": 56, "MP": 34.0, "PTS": 25.9, "TRB": 12.5, "AST": 2.6, "STL": 1.1, "BLK": 2.0, "Year": 2023},
+            {"Unique_ID": 15, "Rk": 15, "Player": "Nikola Jokic", "Team": "DEN", "Pos": "C", "Age": 28, "G": 69, "MP": 33.7, "PTS": 24.5, "TRB": 11.8, "AST": 9.8, "STL": 1.3, "BLK": 0.7, "Year": 2023},
+            {"Unique_ID": 16, "Rk": 16, "Player": "Luka Doncic", "Team": "DAL", "Pos": "PG", "Age": 24, "G": 66, "MP": 36.2, "PTS": 32.4, "TRB": 8.6, "AST": 8.0, "STL": 1.4, "BLK": 0.5, "Year": 2023},
+            {"Unique_ID": 17, "Rk": 17, "Player": "Jayson Tatum", "Team": "BOS", "Pos": "SF", "Age": 25, "G": 74, "MP": 36.9, "PTS": 30.1, "TRB": 8.8, "AST": 4.6, "STL": 1.1, "BLK": 0.7, "Year": 2023},
+            {"Unique_ID": 18, "Rk": 18, "Player": "Zion Williamson", "Team": "NOP", "Pos": "PF", "Age": 22, "G": 29, "MP": 33.0, "PTS": 26.0, "TRB": 7.0, "AST": 4.6, "STL": 1.1, "BLK": 0.6, "Year": 2023},
+            {"Unique_ID": 19, "Rk": 19, "Player": "Ja Morant", "Team": "MEM", "Pos": "PG", "Age": 23, "G": 61, "MP": 31.9, "PTS": 26.2, "TRB": 5.9, "AST": 8.1, "STL": 1.1, "BLK": 0.3, "Year": 2023},
+            {"Unique_ID": 20, "Rk": 20, "Player": "Zach LaVine", "Team": "CHI", "Pos": "SG", "Age": 28, "G": 77, "MP": 35.9, "PTS": 24.8, "TRB": 4.5, "AST": 4.2, "STL": 0.9, "BLK": 0.2, "Year": 2023},
+            {"Unique_ID": 21, "Rk": 21, "Player": "Bradley Beal", "Team": "WAS", "Pos": "SG", "Age": 29, "G": 50, "MP": 33.5, "PTS": 23.2, "TRB": 3.9, "AST": 5.4, "STL": 0.9, "BLK": 0.7, "Year": 2023},
+            {"Unique_ID": 22, "Rk": 22, "Player": "Karl-Anthony Towns", "Team": "MIN", "Pos": "C", "Age": 27, "G": 29, "MP": 33.0, "PTS": 20.8, "TRB": 8.1, "AST": 4.8, "STL": 0.8, "BLK": 0.7, "Year": 2023},
+            {"Unique_ID": 23, "Rk": 23, "Player": "Donovan Mitchell", "Team": "CLE", "Pos": "SG", "Age": 26, "G": 68, "MP": 35.8, "PTS": 28.3, "TRB": 4.3, "AST": 4.4, "STL": 1.5, "BLK": 0.4, "Year": 2023},
+            {"Unique_ID": 24, "Rk": 24, "Player": "Bam Adebayo", "Team": "MIA", "Pos": "C", "Age": 25, "G": 75, "MP": 34.6, "PTS": 20.4, "TRB": 9.2, "AST": 3.2, "STL": 1.2, "BLK": 0.8, "Year": 2023},
+            {"Unique_ID": 25, "Rk": 25, "Player": "Deandre Ayton", "Team": "PHX", "Pos": "C", "Age": 24, "G": 67, "MP": 30.4, "PTS": 18.0, "TRB": 10.0, "AST": 1.7, "STL": 0.6, "BLK": 0.8, "Year": 2023},
+            {"Unique_ID": 26, "Rk": 26, "Player": "Michael Porter Jr.", "Team": "DEN", "Pos": "SF", "Age": 24, "G": 62, "MP": 29.0, "PTS": 17.4, "TRB": 5.5, "AST": 1.0, "STL": 0.6, "BLK": 0.5, "Year": 2023},
+            {"Unique_ID": 27, "Rk": 27, "Player": "Shai Gilgeous-Alexander", "Team": "OKC", "Pos": "SG", "Age": 24, "G": 68, "MP": 35.5, "PTS": 31.4, "TRB": 4.8, "AST": 5.5, "STL": 1.6, "BLK": 1.0, "Year": 2023},
+            {"Unique_ID": 28, "Rk": 28, "Player": "Jaylen Brown", "Team": "BOS", "Pos": "SG", "Age": 26, "G": 67, "MP": 35.9, "PTS": 26.6, "TRB": 6.9, "AST": 3.5, "STL": 1.1, "BLK": 0.4, "Year": 2023},
+            {"Unique_ID": 29, "Rk": 29, "Player": "Ben Simmons", "Team": "BKN", "Pos": "PG", "Age": 26, "G": 42, "MP": 26.3, "PTS": 6.9, "TRB": 6.3, "AST": 6.1, "STL": 1.3, "BLK": 0.6, "Year": 2023},
+            {"Unique_ID": 30, "Rk": 30, "Player": "Pascal Siakam", "Team": "TOR", "Pos": "PF", "Age": 29, "G": 71, "MP": 37.4, "PTS": 24.2, "TRB": 7.8, "AST": 5.8, "STL": 0.9, "BLK": 0.5, "Year": 2023}
+        ]
+        
+        # Add more players with different seasons
+        more_players = []
+        for player in players[:15]:  # Use first 15 players
+            # 2022 season
+            more_players.append({
+                "Unique_ID": player["Unique_ID"] + 100,
+                "Rk": player["Rk"],
+                "Player": player["Player"],
+                "Team": player["Team"],
+                "Pos": player["Pos"],
+                "Age": player["Age"] - 1,
+                "G": max(41, player["G"] - 5),
+                "MP": round(player["MP"] * 0.98, 1),
+                "PTS": round(player["PTS"] * 0.95, 1),
+                "TRB": round(player["TRB"] * 0.97, 1),
+                "AST": round(player["AST"] * 0.96, 1),
+                "STL": round(player["STL"] * 0.98, 1),
+                "BLK": round(player["BLK"] * 0.99, 1),
+                "Year": 2022
+            })
+            
+            # 2021 season
+            more_players.append({
+                "Unique_ID": player["Unique_ID"] + 200,
+                "Rk": player["Rk"],
+                "Player": player["Player"],
+                "Team": player["Team"],
+                "Pos": player["Pos"],
+                "Age": player["Age"] - 2,
+                "G": max(41, player["G"] - 10),
+                "MP": round(player["MP"] * 0.95, 1),
+                "PTS": round(player["PTS"] * 0.9, 1),
+                "TRB": round(player["TRB"] * 0.93, 1),
+                "AST": round(player["AST"] * 0.92, 1),
+                "STL": round(player["STL"] * 0.95, 1),
+                "BLK": round(player["BLK"] * 0.97, 1),
+                "Year": 2021
+            })
+        
+        players.extend(more_players)
+        
+        # Write to CSV
+        with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
+            fieldnames = ['Unique_ID', 'Rk', 'Player', 'Team', 'Pos', 'Age', 'G', 'MP', 'PTS', 'TRB', 'AST', 'STL', 'BLK', 'Year']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            for player in players:
+                writer.writerow(player)
+        
+        print(f"Created sample player stats data with {len(players)} player records")
+    else:
+        print(f"Using existing player stats file: {csv_path}")
+
 # API endpoint to fetch the player stats data
 @app.route('/player-stats')
 def get_player_stats():
     import pandas as pd
     import os
     
+    # Create sample data if it doesn't exist
+    create_sample_player_stats()
+    
     # Load the CSV file
     csv_path = os.path.join(os.path.dirname(__file__), 'nba_per_game_stats.csv')
-    if not os.path.exists(csv_path):
-        return jsonify({"error": "Stats file not found"}), 404
     
     # Read the CSV file
     df = pd.read_csv(csv_path)
@@ -259,11 +358,17 @@ def index():
 # Route to serve the NBA salary game page
 @app.route('/nba-salary-game')
 def nba_salary_game():
+    # Ensure salary data is loaded
+    with app.app_context():
+        if NBAPlayerSalary.query.count() == 0:
+            import_csv_to_db()
     return render_template('nba-salary-game.html')
 
 # Route to serve the NBA guess player game page
 @app.route('/nba-guess-player')
 def nba_guess_player():
+    # Ensure player stats data is loaded
+    create_sample_player_stats()
     return render_template('nba-guess-player.html')
 
 if __name__ == '__main__':
