@@ -9,7 +9,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# Define a model that matches your CSV file structure
+# Define models that match your CSV file structures
 class NBAPlayerSalary(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     player = db.Column(db.String(100))          # Player name
@@ -19,6 +19,27 @@ class NBAPlayerSalary(db.Model):
     
     def __repr__(self):
         return f"<NBAPlayerSalary id={self.id}, player='{self.player}', season='{self.season}', salary={self.salary}, rank={self.rank}>"
+
+class NBAPlayerStats(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    unique_id = db.Column(db.Integer)           # Unique ID from CSV
+    player = db.Column(db.String(100))          # Player name
+    team = db.Column(db.String(10))             # Team abbreviation
+    position = db.Column(db.String(10))         # Position
+    age = db.Column(db.Integer)                 # Age
+    games = db.Column(db.Integer)               # Games played
+    minutes = db.Column(db.Float)               # Minutes per game
+    points = db.Column(db.Float)                # Points per game
+    rebounds = db.Column(db.Float)              # Rebounds per game
+    assists = db.Column(db.Float)               # Assists per game
+    steals = db.Column(db.Float)                # Steals per game
+    blocks = db.Column(db.Float)                # Blocks per game
+    season = db.Column(db.String(20))           # Season
+    year = db.Column(db.Integer)                # Year
+    rank = db.Column(db.Integer)                # Rank
+    
+    def __repr__(self):
+        return f"<NBAPlayerStats id={self.id}, player='{self.player}', team='{self.team}', season='{self.season}'>"
 
 # Create the database tables
 with app.app_context():
@@ -175,18 +196,20 @@ def import_csv_to_db():
         db.session.commit()
         print(f"Imported {len(ranked_players)} player records with ranks")
 
-# Reset the database and import fresh data
+# Initialize the database tables
 with app.app_context():
-    # Drop all tables and recreate them
-    db.drop_all()
+    # Create tables if they don't exist
     db.create_all()
-    
-    # Import the data
-    import_csv_to_db()
 
 # API endpoint to fetch the salary data
 @app.route('/data')
 def get_data():
+    # Ensure data is loaded if accessing this endpoint directly
+    with app.app_context():
+        if NBAPlayerSalary.query.count() == 0:
+            print("Loading salary data for API request...")
+            import_csv_to_db()
+    
     records = NBAPlayerSalary.query.all()
     
     data = [
@@ -301,9 +324,8 @@ def create_sample_player_stats():
     else:
         print(f"Using existing player stats file: {csv_path}")
 
-# API endpoint to fetch the player stats data
-@app.route('/player-stats')
-def get_player_stats():
+# Function to import player stats from CSV to database
+def import_player_stats_to_db():
     import pandas as pd
     import os
     
@@ -322,29 +344,68 @@ def get_player_stats():
     # Convert to list of dictionaries
     player_stats = filtered_df.to_dict('records')
     
-    # Format the data for the frontend
-    formatted_stats = []
+    # Clear existing data
+    NBAPlayerStats.query.delete()
+    
+    # Add all players to the database
     for stat in player_stats:
         # Convert Year to season format (e.g., 2014 -> 2013-14)
         year = int(stat.get('Year', 0))
         season = f"{year-1}-{str(year)[-2:]}" if year > 0 else ""
         
-        # Create formatted stat object
+        # Create new record
+        record = NBAPlayerStats(
+            unique_id=stat.get('Unique_ID', 0),
+            player=stat.get('Player', ''),
+            team=stat.get('Team', ''),
+            position=stat.get('Pos', ''),
+            age=stat.get('Age', 0),
+            games=stat.get('G', 0),
+            minutes=stat.get('MP', 0.0),
+            points=stat.get('PTS', 0.0),
+            rebounds=stat.get('TRB', 0.0),
+            assists=stat.get('AST', 0.0),
+            steals=stat.get('STL', 0.0),
+            blocks=stat.get('BLK', 0.0),
+            season=season,
+            year=year,
+            rank=stat.get('Rk', 0)
+        )
+        db.session.add(record)
+    
+    db.session.commit()
+    print(f"Imported {len(player_stats)} player stats records to database")
+
+# API endpoint to fetch the player stats data
+@app.route('/player-stats')
+def get_player_stats():
+    # Ensure data is in the database if accessing this endpoint directly
+    with app.app_context():
+        if NBAPlayerStats.query.count() == 0:
+            print("Loading player stats data for API request...")
+            import_player_stats_to_db()
+    
+    # Query the database
+    records = NBAPlayerStats.query.all()
+    
+    # Format the data for the frontend
+    formatted_stats = []
+    for record in records:
         formatted_stat = {
-            "id": stat.get('Unique_ID', ''),
-            "rank": stat.get('Rk', ''),
-            "player": stat.get('Player', ''),
-            "team": stat.get('Team', ''),
-            "position": stat.get('Pos', ''),
-            "age": stat.get('Age', ''),
-            "games": stat.get('G', ''),
-            "mpg": stat.get('MP', ''),
-            "ppg": stat.get('PTS', ''),
-            "rpg": stat.get('TRB', ''),
-            "apg": stat.get('AST', ''),
-            "spg": stat.get('STL', ''),
-            "bpg": stat.get('BLK', ''),
-            "season": season
+            "id": record.unique_id,
+            "rank": record.rank,
+            "player": record.player,
+            "team": record.team,
+            "position": record.position,
+            "age": record.age,
+            "games": record.games,
+            "mpg": record.minutes,
+            "ppg": record.points,
+            "rpg": record.rebounds,
+            "apg": record.assists,
+            "spg": record.steals,
+            "bpg": record.blocks,
+            "season": record.season
         }
         formatted_stats.append(formatted_stat)
     
@@ -358,17 +419,21 @@ def index():
 # Route to serve the NBA salary game page
 @app.route('/nba-salary-game')
 def nba_salary_game():
-    # Ensure salary data is loaded
+    # Ensure salary data is loaded only when accessing this game
     with app.app_context():
         if NBAPlayerSalary.query.count() == 0:
+            print("Loading salary game data...")
             import_csv_to_db()
     return render_template('nba-salary-game.html')
 
 # Route to serve the NBA guess player game page
 @app.route('/nba-guess-player')
 def nba_guess_player():
-    # Ensure player stats data is loaded
-    create_sample_player_stats()
+    # Ensure player stats data is loaded only when accessing this game
+    with app.app_context():
+        if NBAPlayerStats.query.count() == 0:
+            print("Loading guess player game data...")
+            import_player_stats_to_db()
     return render_template('nba-guess-player.html')
 
 if __name__ == '__main__':
