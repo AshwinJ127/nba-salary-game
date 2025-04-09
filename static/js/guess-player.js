@@ -317,8 +317,18 @@ function renderGameUI() {
     // Add event listeners
     document.getElementById('player-search').addEventListener('input', handleSearch);
     document.getElementById('player-search').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && gameState.searchResults.length > 0) {
-            handleGuess(gameState.searchResults[0].player);
+        if (e.key === 'Enter') {
+            // If there are search results and player hasn't guessed yet, select the first result
+            if (gameState.searchResults.length > 0 && !gameState.guessed) {
+                handleGuess(gameState.searchResults[0].player);
+            } 
+            // If player has already guessed and next button is visible, click it
+            else if (gameState.guessed) {
+                const nextButton = document.getElementById('next-button');
+                if (nextButton && nextButton.style.display !== 'none') {
+                    nextButton.click();
+                }
+            }
         }
     });
 }
@@ -429,5 +439,24 @@ function updateStreakDisplay() {
     highestStreakValue.textContent = gameState.highestStreak;
 }
 
+// Handle Enter key press globally
+function handleGlobalKeyPress(e) {
+    // Skip if the event target is the search input (it has its own handler)
+    if (e.target.id === 'player-search') {
+        return;
+    }
+    
+    if (e.key === 'Enter' && gameState.guessed) {
+        const nextButton = document.getElementById('next-button');
+        if (nextButton && nextButton.style.display !== 'none') {
+            nextButton.click();
+        }
+    }
+}
+
 // Initialize the game when the page loads
-document.addEventListener('DOMContentLoaded', initGame);
+document.addEventListener('DOMContentLoaded', function() {
+    initGame();
+    // Add global key press event listener
+    document.addEventListener('keydown', handleGlobalKeyPress);
+});
