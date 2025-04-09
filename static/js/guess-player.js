@@ -13,6 +13,9 @@ let gameState = {
     availableYears: []     // Available years in the dataset
 };
 
+// Track selected search result index
+let selectedSearchResultIndex = -1;
+
 // DOM elements
 const gameContent = document.getElementById('game-content');
 const streakValue = document.getElementById('streak-value');
@@ -141,6 +144,8 @@ function filterPlayersByYear() {
 function startNewRound() {
     // Reset game state for the new round
     gameState.guessed = false;
+    gameState.searchResults = [];
+    selectedSearchResultIndex = -1;
     
     // Select a random player
     const randomIndex = Math.floor(Math.random() * gameState.players.length);
@@ -153,6 +158,7 @@ function startNewRound() {
     setTimeout(() => {
         const searchInput = document.getElementById('player-search');
         if (searchInput) {
+            searchInput.value = '';
             searchInput.focus();
         }
     }, 100);
@@ -324,19 +330,53 @@ function renderGameUI() {
     
     // Add event listeners
     document.getElementById('player-search').addEventListener('input', handleSearch);
+    // Reset selected search result index when UI is rendered
+    selectedSearchResultIndex = -1;
+    
     document.getElementById('player-search').addEventListener('keydown', function(e) {
+        // Handle Enter key
         if (e.key === 'Enter') {
-            // If there are search results and player hasn't guessed yet, select the first result
-            if (gameState.searchResults.length > 0 && !gameState.guessed) {
-                handleGuess(gameState.searchResults[0].player);
-            } 
             // If player has already guessed and next button is visible, click it
-            else if (gameState.guessed) {
+            if (gameState.guessed) {
                 const nextButton = document.getElementById('next-button');
                 if (nextButton && nextButton.style.display !== 'none') {
                     nextButton.click();
                 }
+                return;
             }
+            
+            // Only submit a guess if there are search results and a result is selected
+            if (gameState.searchResults.length > 0 && !gameState.guessed) {
+                // If no specific result is selected, use the first one
+                const indexToUse = selectedSearchResultIndex >= 0 ? selectedSearchResultIndex : 0;
+                handleGuess(gameState.searchResults[indexToUse].player);
+            }
+        }
+        
+        // Handle arrow keys for navigating search results
+        else if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && gameState.searchResults.length > 0 && !gameState.guessed) {
+            e.preventDefault(); // Prevent default scrolling behavior
+            
+            const searchResults = document.getElementById('search-results');
+            const resultItems = searchResults.querySelectorAll('.search-result-item');
+            
+            // Remove highlight from current selection
+            if (selectedSearchResultIndex >= 0 && selectedSearchResultIndex < resultItems.length) {
+                resultItems[selectedSearchResultIndex].classList.remove('selected');
+            }
+            
+            // Update selected index based on arrow key
+            if (e.key === 'ArrowDown') {
+                selectedSearchResultIndex = (selectedSearchResultIndex + 1) % resultItems.length;
+            } else { // ArrowUp
+                selectedSearchResultIndex = selectedSearchResultIndex <= 0 ? resultItems.length - 1 : selectedSearchResultIndex - 1;
+            }
+            
+            // Add highlight to new selection
+            resultItems[selectedSearchResultIndex].classList.add('selected');
+            
+            // Ensure the selected item is visible
+            resultItems[selectedSearchResultIndex].scrollIntoView({ block: 'nearest' });
         }
     });
 }
@@ -345,6 +385,9 @@ function renderGameUI() {
 function handleSearch(event) {
     const searchTerm = event.target.value.trim().toLowerCase();
     const searchResults = document.getElementById('search-results');
+    
+    // Reset selected index when search changes
+    selectedSearchResultIndex = -1;
     
     if (searchTerm.length < 2) {
         searchResults.style.display = 'none';
@@ -372,13 +415,27 @@ function handleSearch(event) {
     if (gameState.searchResults.length > 0) {
         searchResults.innerHTML = '';
         
-        gameState.searchResults.forEach(player => {
+        gameState.searchResults.forEach((player, index) => {
             const resultItem = document.createElement('div');
             resultItem.className = 'search-result-item';
             resultItem.innerHTML = `
                 <span class="search-result-name">${player.player}</span>
             `;
             resultItem.addEventListener('click', () => handleGuess(player.player));
+            
+            // Add mouseover event to update selected index
+            resultItem.addEventListener('mouseover', () => {
+                // Remove selected class from all items
+                const allItems = searchResults.querySelectorAll('.search-result-item');
+                allItems.forEach(item => item.classList.remove('selected'));
+                
+                // Add selected class to this item
+                resultItem.classList.add('selected');
+                
+                // Update selected index
+                selectedSearchResultIndex = index;
+            });
+            
             searchResults.appendChild(resultItem);
         });
         

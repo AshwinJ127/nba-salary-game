@@ -249,6 +249,11 @@
     background-color: var(--light-gray);
 }
 
+.search-result-item.selected {
+    background-color: var(--nba-blue-light);
+    border-left: 3px solid var(--nba-blue);
+}
+
 .search-result-name {
     font-weight: 600;
     color: var(--nba-blue);
