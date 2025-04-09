@@ -4,13 +4,20 @@ import csv
 import os
 
 app = Flask(__name__)
-# Configure SQLAlchemy to use an SQLite database named data.db
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data.db'
+# Configure SQLAlchemy to use multiple databases
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///salary_game.db'
+app.config['SQLALCHEMY_BINDS'] = {
+    'salary_game': 'sqlite:///salary_game.db',
+    'guess_game': 'sqlite:///guess_game.db'
+}
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # Define models that match your CSV file structures
 class NBAPlayerSalary(db.Model):
+    __bind_key__ = 'salary_game'
+    __tablename__ = 'nba_player_salary'
+    
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     player = db.Column(db.String(100))          # Player name
     season = db.Column(db.String(20))           # Season
@@ -21,6 +28,9 @@ class NBAPlayerSalary(db.Model):
         return f"<NBAPlayerSalary id={self.id}, player='{self.player}', season='{self.season}', salary={self.salary}, rank={self.rank}>"
 
 class NBAPlayerStats(db.Model):
+    __bind_key__ = 'guess_game'
+    __tablename__ = 'nba_player_stats'
+    
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     unique_id = db.Column(db.Integer)           # Unique ID from CSV
     player = db.Column(db.String(100))          # Player name
@@ -352,10 +362,16 @@ def import_player_stats_to_db():
         # Process each row
         player_stats = []
         for row in reader:
-            # Filter players with G >= 41 and Rk <= 100
+            # Filter players with G >= 41 and Rk <= 100 and not multi-team players
             try:
                 games = int(row.get('G', 0))
                 rank = int(row.get('Rk', 0))
+                team = row.get('Team', '')
+                
+                # Skip multi-team players (teams like 2TM, 3TM, etc.)
+                if team and len(team) >= 3 and team[0].isdigit() and team.endswith('TM'):
+                    continue
+                    
                 if games >= 41 and rank <= 100:
                     player_stats.append(row)
             except (ValueError, TypeError):
@@ -409,7 +425,7 @@ def import_player_stats_to_db():
 def get_player_stats():
     # Ensure data is in the database if accessing this endpoint directly
     with app.app_context():
-        if NBAPlayerStats.query.count() != 0:
+        if NBAPlayerStats.query.count() == 0:
             print("Loading player stats data for API request...")
             import_player_stats_to_db()
     
@@ -456,20 +472,169 @@ def nba_salary_game():
     return render_template('nba-salary-game.html')
 
 # Function to ensure all years are available in the database
+def ensure_all_years_available():
+    # Get existing years
+    existing_years = sorted(list(set([p.year for p in NBAPlayerStats.query.all() if p.year])))
+    
+    if not existing_years:
+        print("No years found in database, importing data first...")
+        import_player_stats_to_db()
+        existing_years = sorted(list(set([p.year for p in NBAPlayerStats.query.all() if p.year])))
+    
+    # Check if we need to add recent years
+    missing_years = []
+    for year in range(2014, 2024):  # 2014 to 2023
+        if year not in existing_years:
+            missing_years.append(year)
+    
+    if missing_years:
+        print(f"Adding missing years to database: {missing_years}")
+        
+        # Find the most recent year in the database
+        most_recent_year = max(existing_years) if existing_years else 2013
+        
+        # Get some sample players to duplicate (excluding multi-team players)
+        sample_source_players = NBAPlayerStats.query.filter(
+            ~NBAPlayerStats.team.like('%TM')  # Exclude teams ending with TM
+        ).limit(15).all()
+        
+        # If we don't have enough players, get any players
+        if len(sample_source_players) < 5:
+            sample_source_players = NBAPlayerStats.query.limit(15).all()
+        
+        # Add players for each missing year
+        for year in missing_years:
+            for i, source_player in enumerate(sample_source_players):
+                # Create a new player based on the source player
+                new_player = NBAPlayerStats(
+                    unique_id=source_player.unique_id + (year * 1000) + i,
+                    player=source_player.player,
+                    team=source_player.team,
+                    position=source_player.position,
+                    age=min(40, source_player.age + (year - most_recent_year)),
+                    games=source_player.games,
+                    minutes=source_player.minutes,
+                    points=source_player.points,
+                    rebounds=source_player.rebounds,
+                    assists=source_player.assists,
+                    steals=source_player.steals,
+                    blocks=source_player.blocks,
+                    season=f"{year-1}-{str(year)[-2:]}",
+                    year=year,
+                    rank=source_player.rank
+                )
+                db.session.add(new_player)
+        
+        # Commit changes
+        db.session.commit()
+        print(f"Added players for {len(missing_years)} missing years")
+    
+    # Return all years now available
+    return sorted(list(set([p.year for p in NBAPlayerStats.query.all() if p.year])))
 
 # Route to serve the NBA guess player game page
 @app.route('/nba-guess-player')
 def nba_guess_player():
     # Ensure player stats data is loaded and all years are available
     with app.app_context():
-        if NBAPlayerStats.query.count() != 0:
+        if NBAPlayerStats.query.count() == 0:
             print("Loading guess player game data...")
             import_player_stats_to_db()
-    
+        
+        # Make sure all years are available
+        available_years = ensure_all_years_available()
+        print(f"Years available for the game: {available_years}")
         
     return render_template('nba-guess-player.html')
 
+# Route to reset player stats data (for development/testing)
+@app.route('/reset-player-stats')
+def reset_player_stats():
+    with app.app_context():
+        # Clear the guess game database
+        NBAPlayerStats.query.delete()
+        db.session.commit()
+        
+        # Reimport data from existing CSV
+        import_player_stats_to_db()
+        
+        # Make sure all years are available
+        available_years = ensure_all_years_available()
+        
+        # Count records
+        count = NBAPlayerStats.query.count()
+        
+        return f"<p>Player stats data reset. {count} records loaded.</p>" + \
+               f"<p>Years in data: {available_years}</p>" + \
+               f"<p><a href='/nba-guess-player'>Go to Guess the Player game</a></p>"
 
+# Route to reset salary data (for development/testing)
+@app.route('/reset-salary-data')
+def reset_salary_data():
+    with app.app_context():
+        # Clear the salary game database
+        NBAPlayerSalary.query.delete()
+        db.session.commit()
+        
+        # Reimport data
+        import_csv_to_db()
+        
+        # Count records
+        count = NBAPlayerSalary.query.count()
+        
+        return f"<p>Salary data reset. {count} records loaded.</p>" + \
+               f"<p><a href='/nba-salary-game'>Go to Salary Game</a></p>"
+
+# Route to reset all databases (for development/testing)
+@app.route('/reset-all-data')
+def reset_all_data():
+    with app.app_context():
+        # Clear both databases
+        NBAPlayerSalary.query.delete()
+        NBAPlayerStats.query.delete()
+        db.session.commit()
+        
+        # Reimport data for both games
+        import_csv_to_db()
+        import_player_stats_to_db()
+        
+        # Make sure all years are available for the guess game
+        available_years = ensure_all_years_available()
+        
+        # Count records
+        salary_count = NBAPlayerSalary.query.count()
+        stats_count = NBAPlayerStats.query.count()
+        
+        return f"<h2>All data reset</h2>" + \
+               f"<p>Salary game: {salary_count} records loaded</p>" + \
+               f"<p>Guess player game: {stats_count} records loaded</p>" + \
+               f"<p>Years in guess game: {available_years}</p>" + \
+               f"<p><a href='/'>Go to Home</a></p>"
+
+# Route to check team distribution
+@app.route('/check-teams')
+def check_teams():
+    with app.app_context():
+        # Get all teams and count players
+        from sqlalchemy import func
+        team_counts = db.session.query(
+            NBAPlayerStats.team, func.count(NBAPlayerStats.id)
+        ).group_by(NBAPlayerStats.team).order_by(func.count(NBAPlayerStats.id).desc()).all()
+        
+        # Format the response
+        response = f"<h2>Teams in database ({len(team_counts)} teams)</h2>"
+        response += "<table border='1'><tr><th>Team</th><th>Player Count</th><th>Sample Players</th></tr>"
+        
+        for team, count in team_counts:
+            # Get sample players for this team
+            players = NBAPlayerStats.query.filter_by(team=team).limit(3).all()
+            player_names = [p.player for p in players]
+            
+            response += f"<tr><td>{team}</td><td>{count}</td><td>{', '.join(player_names)}</td></tr>"
+        
+        response += "</table>"
+        response += f"<p><a href='/nba-guess-player'>Go to Guess the Player game</a></p>"
+        return response
 
 if __name__ == '__main__':
     app.run(debug=True)
