@@ -148,6 +148,14 @@ function startNewRound() {
     
     // Render the game UI
     renderGameUI();
+    
+    // Focus on the search input after a short delay to ensure the UI is fully rendered
+    setTimeout(() => {
+        const searchInput = document.getElementById('player-search');
+        if (searchInput) {
+            searchInput.focus();
+        }
+    }, 100);
 }
 
 // Render the game UI
