@@ -185,7 +185,7 @@ with app.app_context():
     # Import the data
     import_csv_to_db()
 
-# API endpoint to fetch the data
+# API endpoint to fetch the salary data
 @app.route('/data')
 def get_data():
     records = NBAPlayerSalary.query.all()
@@ -203,6 +203,54 @@ def get_data():
     
     return jsonify(data)
 
+# API endpoint to fetch the player stats data
+@app.route('/player-stats')
+def get_player_stats():
+    import pandas as pd
+    import os
+    
+    # Load the CSV file
+    csv_path = os.path.join(os.path.dirname(__file__), 'nba_per_game_stats.csv')
+    if not os.path.exists(csv_path):
+        return jsonify({"error": "Stats file not found"}), 404
+    
+    # Read the CSV file
+    df = pd.read_csv(csv_path)
+    
+    # Filter players with G >= 41 and Rk <= 100
+    filtered_df = df[(df['G'] >= 41) & (df['Rk'] <= 100)]
+    
+    # Convert to list of dictionaries
+    player_stats = filtered_df.to_dict('records')
+    
+    # Format the data for the frontend
+    formatted_stats = []
+    for stat in player_stats:
+        # Convert Year to season format (e.g., 2014 -> 2013-14)
+        year = int(stat.get('Year', 0))
+        season = f"{year-1}-{str(year)[-2:]}" if year > 0 else ""
+        
+        # Create formatted stat object
+        formatted_stat = {
+            "id": stat.get('Unique_ID', ''),
+            "rank": stat.get('Rk', ''),
+            "player": stat.get('Player', ''),
+            "team": stat.get('Team', ''),
+            "position": stat.get('Pos', ''),
+            "age": stat.get('Age', ''),
+            "games": stat.get('G', ''),
+            "mpg": stat.get('MP', ''),
+            "ppg": stat.get('PTS', ''),
+            "rpg": stat.get('TRB', ''),
+            "apg": stat.get('AST', ''),
+            "spg": stat.get('STL', ''),
+            "bpg": stat.get('BLK', ''),
+            "season": season
+        }
+        formatted_stats.append(formatted_stat)
+    
+    return jsonify(formatted_stats)
+
 # Route to serve the main portal page
 @app.route('/')
 def index():
@@ -212,6 +260,11 @@ def index():
 @app.route('/nba-salary-game')
 def nba_salary_game():
     return render_template('nba-salary-game.html')
+
+# Route to serve the NBA guess player game page
+@app.route('/nba-guess-player')
+def nba_guess_player():
+    return render_template('nba-guess-player.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
